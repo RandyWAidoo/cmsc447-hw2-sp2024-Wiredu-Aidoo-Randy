@@ -1,0 +1,46 @@
+{%extends "base.html"%}
+
+{%block body_content%}
+    {%block pre_result_content%}
+    {%endblock pre_result_content%}
+
+    <div class="tabs">
+        <div class="tab active" id="Posts" 
+        onclick="
+        changeActiveState('Posts', 'tab active', 'Spaces', 'tab');
+        changeActiveState('Post_results', 'posts-container', 'Space_results', 'posts-container inactive');
+        "
+        >
+            Posts
+        </div>
+        <div class="tab" id="Spaces" 
+        onclick="
+        changeActiveState('Spaces', 'tab active', 'Posts', 'tab');
+        changeActiveState('Space_results', 'posts-container', 'Post_results', 'posts-container inactive');
+        "
+        >
+            Spaces
+        </div>
+    </div>
+
+    <!--Post results-->
+    <div id="Post_results" class="posts-container">
+        {%for post_result in post_results%}
+            {%with post=post_result, idx=loop.index%}
+                {%include "./components/user_post.html"%}
+            {%endwith%}
+        {%endfor%}
+    </div>
+
+    <!--Space results-->
+    <div id="Space_results" class="posts-container inactive">
+        {%for space_result in space_results%}
+            {%with space=space_result, idx=loop.index%}
+                {%include "./components/space.html"%}
+            {%endwith%}
+        {%endfor%}
+    </div>
+
+    {%block post_result_content%}
+    {%endblock post_result_content%}
+{%endblock body_content%}

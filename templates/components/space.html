@@ -1,0 +1,38 @@
+{%extends "./components/imports.html"%}
+
+{%block body%}
+    <div class="post">
+        <div class="post-header">
+            <div>
+                <h2 class="post-title">#{{space.name}}</h2>
+                <p class="post-meta">{{len(space.posts)}}+ posts</p>
+            </div>
+        </div>
+        <hr>
+        
+        <p class="post-content">{{space.summary}}</p>
+        <div class="post-actions">
+            {%set str_idx=idx|string%}
+            {%set like_id="spaceLikeBtn" + str_idx%}
+            {%set dislike_id="spaceDislikeBtn" + str_idx%}
+            <button id="{{like_id}}" class="action-button like inactive" 
+                onclick="changeActiveState(
+                    '{{like_id}}', 'action-button like active', 
+                    '{{dislike_id}}', 'action-button dislike inactive', 
+                    false, 'action-button like inactive'
+                )"
+            >
+                👍 Like
+            </button>
+            <button id="dislikeBtn1" class="action-button dislike inactive" 
+                onclick="changeActiveState(
+                    '{{dislike_id}}', 'action-button dislike active', 
+                    '{{like_id}}', 'action-button like inactive', 
+                    false, 'action-button dislike inactive'
+                )"
+            >
+                👎 Dislike
+            </button>
+        </div>
+    </div>
+{%endblock body%}

@@ -1,0 +1,15 @@
+{%extends "base.html"%}
+
+{%block body_content%}
+    <div class="posts-container">
+        {%with post={
+                "author": "User", "date": "January 1, 2024", 
+                "time": "1:00 pm", "title": "NotTwitter Rules",
+                "content": "It's definitely the best platform out there.",
+                "space": "#all"
+            }, idx=0
+        %}
+            {%include "./components/user_post.html"%}
+        {%endwith%}
+    </div>
+{%endblock body_content%}

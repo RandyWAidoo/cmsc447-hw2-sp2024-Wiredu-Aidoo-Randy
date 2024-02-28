@@ -1,0 +1,42 @@
+{%extends "./components/imports.html"%}
+
+{%block body%}
+    <div class="post">
+        <div class="post-header">
+            <div>
+                👤 {{post.author}}
+                <p class="post-meta">Posted on {{post.date}}, {{post.time}}</p>
+                <h2 class="post-title">{{post.title}}</h2>
+            </div>
+        </div>
+        <hr>
+        <p class="post-content">{{post.content}}</p>
+        <div class="post-actions">
+            {%set str_idx=idx|string%}
+            {%set like_id="postLikeBtn" + str_idx%}
+            {%set dislike_id="postDislikeBtn" + str_idx%}
+            <button id="{{like_id}}" class="action-button like inactive" 
+                onclick="changeActiveState(
+                    '{{like_id}}', 'action-button like active', 
+                    '{{dislike_id}}', 'action-button dislike inactive', 
+                    false, 'action-button like inactive'
+                )"
+            >
+                👍 Like
+            </button>
+            <button id="{{dislike_id}}" class="action-button dislike inactive" 
+                onclick="changeActiveState(
+                    '{{dislike_id}}', 'action-button dislike active', 
+                    '{{like_id}}', 'action-button like inactive', 
+                    false, 'action-button dislike inactive'
+                )"
+            >
+                👎 Dislike
+            </button>
+            <button class="action-button comment-button">Comment 💬</button>
+            <button class="action-button share-button">Share ↪</button>
+        </div>
+        <hr>
+        <div>{{post.space}}</div>
+    </div>
+{%endblock body%}

@@ -1,0 +1,176 @@
+/*General body*/
+body {
+    font-family: Arial, sans-serif;
+}
+
+/*Top/av bar*/
+.top-bar {
+    background-color: #1da1f2;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+.top-bar-icon {
+    font-size: 24px;
+    color: #f8fafb;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+}
+.top-bar-icon:hover{
+    background-color: #333;
+}
+.nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: sticky;
+    left: 40%;
+}
+.nav-bar a {
+    color: #fff;
+    text-decoration: none;
+    padding: 0 10px;
+    margin: 0 5px;
+}
+.nav-bar a:hover {
+    background-color: #333;
+}
+.search-bar{
+    display: flex;
+}
+
+/*Welcome box just below top bar*/
+.welcome-container {
+    background-color: #f2f2f2;
+    text-align: center;
+    padding: 65px;
+}
+.welcome-text {
+    font-size: 24px;
+}
+.sub-text {
+    font-size: 48px;
+    margin-top: 10px;
+}
+
+/*Tabs*/
+.tabs {
+    display: flex;
+    justify-content: center;
+    background-color: #f2f2f2;
+    padding: 10px;
+}
+.tab {
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 5px;
+}
+.tab.active {
+    background-color: #1da1f2;
+    color: #fff;
+}
+
+/*Posts/Spaces*/
+.posts-container {
+    margin-top: 50px; 
+    padding: 20px;
+}
+.posts-container.inactive {
+    display: none;
+}
+.post {
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+    padding: 20px;
+}
+.post-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.post-title {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+.post-meta {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 10px;
+}
+.post-content {
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+.post-actions {
+    position: relative;
+}
+.action-button {
+    padding: 5px 8px; 
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    text-align: center;
+}
+.action-button.like {
+    background-color: #33cc33;
+    color: #fff;
+    position: sticky;
+    left: 0%;
+}
+.action-button.like.active{
+    background-color: #33cc33;
+}
+.action-button.like.inactive{
+    background-color: #b0e6b0;
+}
+.action-button.dislike {
+    background-color: #ff3333; 
+    color: #fff;
+    position: sticky;
+    left: .5%;
+}
+.action-button.dislike.active{
+    background-color: #ff3333;
+}
+.action-button.dislike.inactive{
+    background-color: #dd9292;
+}
+.action-button.comment-button {
+    text-align: center;
+    position: sticky;
+    left: 45%;
+}
+.action-button.share-button {
+    background-color: #6d88f5; 
+    color: #fff;
+    position: sticky;
+    left: 100%;
+}
+.action-button:hover {
+    background-color: #eee;
+}
+
+/*About page*/
+.about-pg-image-box{
+    width: 30%;
+    display: block;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 340px;
+    left: 65%;
+    word-wrap: break-word;
+}
+.about-pg-first-text-box{
+    width: 65%;
+    display: block;
+    word-wrap: break-word;
+}

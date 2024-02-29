@@ -174,22 +174,32 @@ def search():
     #Recursively shrink the pool of results by 
     # filtering the previous results on the -nth keyword
     post_results = sql_session.query(Posts).filter(
-        keywords[-1] in re.split(
-            pattern, 
-            ' '.join([
+        keywords[-1] in ' '.join([
+            str(Posts.username), 
+            str(Posts.title), 
+            str(Posts.content), 
+            str(Posts.space)
+        ])
+    )
+    for i in range(len(keywords)-2, -1, -1):
+        post_results = post_results.filter(
+            keywords[i] in ' '.join([
                 str(Posts.username), 
                 str(Posts.title), 
                 str(Posts.content), 
                 str(Posts.space)
             ])
         )
-    )
-    for i in range(len(keywords)-2, -1, -1):
-        post_results = post_results.filter(keywords[i] in Posts.fill_content)
 
     #Return a search page with post and space objects
     posts = post_results.all()
-    spaces = {post.space for post in posts}
+    spaces = dict({
+        post.space: dict( 
+            summary="No summary at this time",
+            n_posts=len([_post for _post in posts if _post.space == post.space])
+        ) 
+        for post in posts
+    })
     return render_template("search_results.html", posts=posts, 
                            spaces=spaces, username=session["username"])
 
@@ -202,13 +212,13 @@ def explore():
 
     posts = sql_session.query(Posts).all()
     posts = random.sample(posts, min([100, len(posts)]))
-    spaces = {
+    spaces = dict({
         post.space: dict( 
             summary="No summary at this time",
             n_posts=len([_post for _post in posts if _post.space == post.space])
         ) 
         for post in posts
-    }
+    })
     return render_template('explore.html', posts=posts, 
                            spaces=spaces, username=session["username"])
 
@@ -220,13 +230,13 @@ def user_home(username):
     
     posts = sql_session.query(Posts).all()
     posts = random.sample(posts, min([100, len(posts)]))
-    spaces = {
+    spaces = dict({
         post.space: dict( 
             summary="No summary at this time",
             n_posts=len([_post for _post in posts if _post.space == post.space])
         ) 
         for post in posts
-    }
+    })
     return render_template('user_home.html', username=username, posts=posts, spaces=spaces)
 
 @app.route('/users/<username>/new_post', methods=["GET", "POST"])

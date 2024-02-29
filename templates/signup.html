@@ -1,4 +1,5 @@
 {%extends "base.html"%}
+
 {%block body_content%}
 
 {%for category, message in get_flashed_messages(with_categories=True)%}
@@ -8,31 +9,32 @@
     </div>
 {%endfor%}
 
-<h1>Sign Up</h1>
-<form method="post">
-    {{form.hidden_tag()}}
-
-    {{form.username.label(class="form-label")}}
-    {{form.username(class="form-control")}}
+<h1>Signup</h1>
+<br>
+<form method="post" action="{{url_for('signup')}}">
+    <label for="username" class="form-label">Username:</label>
+    <input type="text" id="username" name="username" class="form-control">
     <br>
 
-    {{form.pw.label(class="form-label")}}
-    {{form.pw(class="form-control")}}
+    <label for="password" class="form-label">Password:</label>
+    <input type="password" id="password" name="password" class="form-control">
     <br>
 
-    {{form.confirm_pw.label(class="form-label")}}
-    {{form.confirm_pw(class="form-control")}}
+    <label for="password" class="form-label">Confirm Password:</label>
+    <input type="password" id="confirm_password" name="confirm_password" class="form-control">
     <br>
-
-    {{form.email.label(class="form-label")}}
-    {{form.email(class="form-control")}}
+    
+    <label for="email" class="form-label">Email:</label>
+    <input type="email" id="email" name="email" class="form-control">
     <br><br>
 
-    {{form.submit(class="btn btn-secondary")}}
+    <button type="submit" name="btn" class="btn btn-secondary">
+        Sign Up
+    </button>
 </form>
-<br>
+<br><br>
 
-<p>Already have an account? <a href="{{url_for('login')}}">Login</a></p>
-
+<p>Don't have an account? <a href="{{url_for('login')}}">Sign Up</a></p>
 
 {%endblock body_content%}
+

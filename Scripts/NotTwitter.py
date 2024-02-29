@@ -6,11 +6,15 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Length, Email, EqualTo
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import create_engine, Column, Integer, String, BLOB, DateTime
+from sqlalchemy import (create_engine, MetaData, Table, 
+                        Column, Integer, String, BLOB, DateTime, 
+                        update)
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import bcrypt
 import re
+import random
+import uuid
 
 app = Flask(__name__, static_folder="../static", template_folder="../templates")
 app.config['SECRET_KEY'] = ''.join(
@@ -29,42 +33,21 @@ template_dir = os.path.join(proj_dir, 'templates')
 
 #Table classes
 class Credentials(database.Model):
-    email = Column(String(200), nullable=False, unique=True)
     username = Column(String(200), primary_key=True, nullable=False)
-    pw_hash = Column(BLOB(), nullable=False)
+    email = Column(String(200), nullable=False, unique=True)
+    pw_hash = Column(String(), nullable=False)
     
 class Posts(database.Model):
     id = Column(String(200), primary_key=True, nullable=False)
-    summary = Column(String(200), nullable=False)
-    content = Column(String(200), nullable=False)
-    space = Column(String(200), nullable=False)
-    date = Column(DateTime(200), nullable=False)
     username = Column(String(200), nullable=False)
-    views = Column(Integer(), nullable=False)
-    likes = Column(Integer(), nullable=False)
-    dislikes = Column(Integer(), nullable=False)
-
-#Form classes
-class SignUpForm(FlaskForm):
-    email = StringField('Enter your email', validators=[DataRequired()])#, Email()])
-    username = StringField('Enter your username', validators=[DataRequired(), Length(2, 100)])
-    pw = StringField('Enter your password',  validators=[DataRequired(), Length(8, 100)])
-    confirm_pw = StringField('Confirm password', validators=[DataRequired()])#EqualTo(pw.name)])
-    submit = SubmitField('Sign Up')
-
-class LoginForm(FlaskForm):
-    username = StringField('Enter your username', validators=[DataRequired()])
-    pw = StringField('Enter your password',  validators=[DataRequired(), Length(8, 100)])
-    submit = SubmitField('Login') 
-
-class UserForm(FlaskForm):
-    new_email = StringField('Email', validators=[DataRequired()])#, Email()])
-    new_username = StringField('Username', validators=[DataRequired()])
-    new_pw = StringField('Password',  validators=[DataRequired(), Length(8, 100)])
-    old_pw = StringField('Old password', validators=[DataRequired()])
-    submit = SubmitField('Change') 
-    delete = SubmitField('Delete Account') 
-    cancel = SubmitField('Cancel')
+    date_and_time = Column(String(200), nullable=False)
+    summary = Column(String(200), nullable=False, default="")
+    title = Column(String(200), nullable=False)
+    content = Column(String(), nullable=False)
+    space = Column(String(200), nullable=False)
+    views = Column(Integer(), nullable=False, default=0)
+    likes = Column(Integer(), nullable=False, default=0)
+    dislikes = Column(Integer(), nullable=False, default=0)
 
 #Static site pages
 # Meta
@@ -81,76 +64,84 @@ def home():
 def about():
     if 'username' not in session:
         session['username'] = None
+
     return render_template('about.html', username=session["username"])
 
 # Authentication
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    form = SignUpForm()
     session["username"] = None
 
-    if form.validate_on_submit():
-        pw_confirmed = (form.pw.data == form.confirm_pw.data)
-        username_valid = (','  not in form.username.data)
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        pw = request.form["password"]
+        confirm_pw = request.form["confirm_password"]
+
+        pw_confirmed = (pw == confirm_pw)
+        username_valid = (','  not in username)
         username_unique = (not sql_session.query(Credentials).filter(
-            Credentials.username == form.username.data
+            Credentials.username == username
         ).first())
         email_unique = (not sql_session.query(Credentials).filter(
-            Credentials.email == form.email.data
+            Credentials.email == email
         ).first())
+
         if not pw_confirmed:
             flash('Passwords do not match', 'error')
         elif not username_valid:
             flash(f"Invalid letter ',' in username", 'error')
         elif not username_unique:
-            flash(f'Username "{form.username.data}" is unavailable', 'error')
+            flash(f'Username is unavailable', 'error')
         elif not email_unique:
             flash(f'Provided email already in use', 'error')
         else:
-            #Add a credential record
-            pw_hash = bcrypt.hashpw(form.pw.data.encode(), salt=bcrypt.gensalt())
+            pw_hash = bcrypt.hashpw(pw.encode(), salt=bcrypt.gensalt())
             record = Credentials(
-                email=form.email.data,
-                username=form.username.data, pw_hash=pw_hash
+                email=email,
+                username=username, pw_hash=pw_hash.decode()
             )
-            sql_session.add(record)
-            #Commit
-            sql_session.commit()
-            return redirect(url_for('login', username=session["username"]))
 
-    return render_template('signup.html', form=form, username=session["username"])
+            sql_session.add(record)
+            sql_session.commit()
+
+            return redirect(url_for('login'))
+
+    return render_template('signup.html', username=session["username"])
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     username = None
     pw = None
     login_success = False
-    form = LoginForm()
     session["username"] = None
 
-    #Validate the form and set the variables to its values if valid
-    if form.validate_on_submit():
-        username = form.username.data
-        pw = form.pw.data
+    if request.method == "POST":
+        username = request.form["username"]
+        pw = request.form["password"]
         record = sql_session.query(Credentials).filter(Credentials.username == username).first()
         pw_hash = record.pw_hash if record else None
-        login_success = (pw_hash and bcrypt.checkpw(pw.encode(), pw_hash))
+        login_success = (pw_hash and bcrypt.checkpw(pw.encode(), pw_hash.encode()))
         if login_success:
             session["username"] = username
-            return redirect(url_for('user_home', username=username))
+            return redirect(url_for('user_home', username=session["username"]))
         else:
             flash('Incorrect Username or Password', category='error')
 
-    return render_template('login.html', form=form, username=session["username"])
+    return render_template('login.html', username=session["username"])
 
 #Dynamic pages
 # Search results
-@app.route("/search", methods=['POST'])
+@app.route("/search", methods=['GET', 'POST'])
 def search():
     if 'username' not in session:
         session['username'] = None
 
-    #If the query is empty, send them to an explore page
+    #Redirect GETs to explore
+    if request.method == "GET":
+        return redirect(url_for("explore"))
+
+    #If the query is empty, Redirect to explore
     query = request.form["search"]
     if not len(query):
         return redirect(url_for("explore"))
@@ -183,15 +174,24 @@ def search():
     #Recursively shrink the pool of results by 
     # filtering the previous results on the -nth keyword
     post_results = sql_session.query(Posts).filter(
-        keywords[-1] in re.split(pattern, str(Posts.content))
+        keywords[-1] in re.split(
+            pattern, 
+            ' '.join([
+                str(Posts.username), 
+                str(Posts.title), 
+                str(Posts.content), 
+                str(Posts.space)
+            ])
+        )
     )
     for i in range(len(keywords)-2, -1, -1):
-        post_results = post_results.filter(keywords[i] in Posts.content)
+        post_results = post_results.filter(keywords[i] in Posts.fill_content)
 
     #Return a search page with post and space objects
     posts = post_results.all()
     spaces = {post.space for post in posts}
-    return render_template("search_results.html", posts=posts, spaces=spaces, username=session["username"])
+    return render_template("search_results.html", posts=posts, 
+                           spaces=spaces, username=session["username"])
 
 
 # Exploration page
@@ -201,8 +201,16 @@ def explore():
         session['username'] = None
 
     posts = sql_session.query(Posts).all()
-    spaces = {post.space for post in posts}
-    return render_template('explore.html', posts=posts, spaces=spaces, username=session["username"])
+    posts = random.sample(posts, min([100, len(posts)]))
+    spaces = {
+        post.space: dict( 
+            summary="No summary at this time",
+            n_posts=len([_post for _post in posts if _post.space == post.space])
+        ) 
+        for post in posts
+    }
+    return render_template('explore.html', posts=posts, 
+                           spaces=spaces, username=session["username"])
 
 # User pages
 @app.route('/users/<username>')
@@ -211,77 +219,106 @@ def user_home(username):
         return redirect(url_for('login'))
     
     posts = sql_session.query(Posts).all()
-    spaces = {post.space for post in posts}
-    return render_template('user_home.html', username=username, posts=posts, spaces=spaces, authenticated=True)
+    posts = random.sample(posts, min([100, len(posts)]))
+    spaces = {
+        post.space: dict( 
+            summary="No summary at this time",
+            n_posts=len([_post for _post in posts if _post.space == post.space])
+        ) 
+        for post in posts
+    }
+    return render_template('user_home.html', username=username, posts=posts, spaces=spaces)
+
+@app.route('/users/<username>/new_post', methods=["GET", "POST"])
+def new_post(username):
+    if "username" not in session or session["username"] != username:
+        return redirect(url_for('login'))
+    
+    if request.method == "POST":
+        id = uuid.uuid4().hex
+        date_and_time = datetime.now().strftime("%Y-%m-%d %h:%M:%S")
+        title = request.form["title"]
+        content = request.form["content"]
+        space = ''.join(request.form["space"].split())
+
+        sql_session.add(Posts(
+            id=id, username=username, 
+            date_and_time=date_and_time, 
+            title=title, content=content, space=space
+        ))
+        sql_session.commit()
+
+        return redirect(url_for("user_home", username=username))
+    else:
+        return render_template('new_post.html', username=username)
 
 @app.route('/users/<username>/account', methods=['GET', 'POST'])
 def account(username):
     if "username" not in session or session["username"] != username:
         return redirect(url_for('login'))
     
-    form = UserForm()
     cred_query = sql_session.query(Credentials).filter(Credentials.username == username)
     user = cred_query.first()
-    form.new_email.data = user.email
-    form.new_username.data = username
+    
+    if request.method == "GET":
+        return render_template(
+            'account.html', username=session["username"], email=user.email, 
+        )
+    elif request.form["btn"] == "delete":
+        sql_session.delete(user)
+        for post in sql_session.query(Posts).filter(Posts.username == username):
+            sql_session.delete(post)
+        session["username"] = None
+        sql_session.commit()
+        return redirect(url_for('home'))
+    else:
+        new_username = request.form["username"]
+        new_email = request.form["email"]
+        new_pw = request.form["password"]
+        old_pw = request.form["old_password"]
 
-    if form.validate_on_submit():
-        if form.delete.data:
-            sql_session.delete(sql_session.query(Credentials).filter(Credentials.username == username).first())
-            for post in sql_session.query(Posts).filter(Posts.username == username):
-                sql_session.delete(post)
-            return redirect(url_for('home'))
+        old_pw_correct = bcrypt.checkpw(old_pw.encode(), user.pw_hash.encode())
 
-        if form.cancel.data:
-            return render_template('account.html', 
-                                   username=session["username"], form=form, changing_creds=False,
-                                   authenticated=True)
-
-        if not form.old_pw.data \
-        and (form.new_email.data or form.new_username.data or form.new_pw.data):
-            return render_template('account.html', 
-                                   username=username, form=form, changing_creds=True,
-                                   authenticated=True)
-
-        old_pw_correct = bcrypt.checkpw(form.old_pw.data.encode(), user.pw_hash)
-
-        username_unique = (user.username == form.new_username.data) \
+        username_unique = (user.username == new_username) \
         or (not sql_session.query(Credentials).filter(
-            Credentials.username == form.new_username.data
+            Credentials.username == new_username
         ).first())
 
-        email_unique = (user.email == form.new_email.data) \
+        email_unique = (user.email == new_email) \
         or (not sql_session.query(Credentials).filter(
-            Credentials.email == form.new_email.data
+            Credentials.email == new_email
         ).first())
 
         if not old_pw_correct:
-            flash('Passwords do not match', 'error')
+            flash('Incorrect old password', 'error')
         elif not username_unique:
-            flash(f'Username "{form.new_username.data}" is unavailable', 'error')
+            flash(f'Username is unavailable', 'error')
         elif not email_unique:
             flash(f'Provided email already in use', 'error')
 
         if old_pw_correct and username_unique and email_unique:
             update_record = dict()
-            if form.new_username.data != user.username:
-                update_record[user.username] = form.new_username.data,
-                #Update other tables using the new username
-                sql_session.query(Posts).filter(Posts.username == user.username).update(update_record)
-            if form.new_email.data != user.email:
-                update_record[user.email] = form.new_email.data
-            if form.new_pw.data:
-                new_pw_hash = bcrypt.hashpw(form.new_pw.data.encode(), bcrypt.gensalt())
-                update_record[user.pw_hash] = new_pw_hash
 
+            if new_username and new_username != user.username:
+                update_record["username"] = new_username
+                user_posts = sql_session.query(Posts).filter(Posts.username == user.username)
+                user_posts.update({"username": new_username})
+
+                session["username"] = new_username
+
+            if new_email and new_email != user.email:
+                update_record["email"] = new_email
+
+            if new_pw and new_pw != old_pw:
+                new_pw_hash = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
+                update_record["pw_hash"] = new_pw_hash.decode()
+                
             cred_query.update(update_record)
             sql_session.commit()
-            return redirect(url_for('account', username=username))
+                
+            return redirect(url_for('account', username=session["username"]))
         else:
-            return redirect(url_for('account', username=username))
-    
-    return render_template('account.html', username=username, form=form, changing_creds=False, 
-                           authenticated=True)
+            return redirect(url_for('account', username=session["username"]))
 
 #Error handlers
 @app.errorhandler(404)

@@ -9,13 +9,14 @@ cursor.execute('DROP TABLE IF EXISTS Credentials')
 cursor.execute('DROP TABLE IF EXISTS Posts')
 cursor.execute('DROP TABLE IF EXISTS Activity')
 cursor.execute('DROP TABLE IF EXISTS Spaces')
-cursor.execute('CREATE TABLE Credentials(username TEXT PRIMARY KEY, email TEXT, pw_hash BLOB)')
+cursor.execute('CREATE TABLE Credentials(username TEXT PRIMARY KEY, email TEXT, pw_hash TEXT)')
 cursor.execute(
     """
     CREATE TABLE Posts
-    (id TEXT PRIMARY KEY, summary TEXT, content TEXT, 
-    space TEXT, date TEXT, username TEXT,
-    views INTEGER, likes INTEGER, dislikes INTEGER)
+    (id TEXT PRIMARY KEY, username TEXT, date_and_time TEXT,
+    summary TEXT DEFAULT '', 
+    title TEXT, content TEXT, space TEXT,
+    views INTEGER DEFAULT 0, likes INTEGER DEFAULT 0, dislikes INTEGER DEFAULT 0)
     """
 )
 conn.commit()

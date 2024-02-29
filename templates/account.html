@@ -1,6 +1,7 @@
 {%extends "base.html"%}
 
 {%block body_content%}
+
 {%for category, message in get_flashed_messages(with_categories=True)%}
     <div class="alert alert-{{'success' if category == 'message' else category if category == 'warning' else 'danger'}} alert-dismissible fade show" role="alert">
         <strong>ⓘ {{message}}</strong>
@@ -8,27 +9,41 @@
     </div>
 {%endfor%}
 
-<h1>My Account</h1>
-<form method="post">
-    {{form.hidden_tag()}}
-
-    {{form.new_username.label(class="form-label")}}
-    {{form.new_username(class="form-control")}}
-    <br>
-
-    {{form.new_pw.label(class="form-label")}}
-    {{form.new_pw(class="form-control")}}
-    <br>
-
-    {{form.new_email.label(class="form-label")}}
-    {{form.new_email(class="form-control")}}
-    <br><br>
-
-    {{form.submit(class="btn btn-secondary")}}
-    <br><br>
-
-    {{form.delete(class="btn btn-secondary")}}
-</form>
+<h1>Account</h1>
 <br>
+<form method="post" action="{{url_for('account', username=username)}}">
+    <label for="username" class="form-label">Username:</label>
+    <input type="text" id="username" name="username" class="form-control"
+    value="{{username}}">
+    <br>
+
+    <label for="password" class="form-label">Password:</label>
+    <input type="password" id="password" name="password" class="form-control">
+    <br>
+
+    <label for="email" class="form-label">Email:</label>
+    <input type="email" id="email" name="email" class="form-control" 
+    value="{{email}}">
+    <br>
+
+    <label for="old_password" class="form-label">
+        Current Password(Needed to change credentials):
+    </label>
+    <input type="password" id="old_password" name="old_password" class="form-control">
+    <br><br>
+
+    <button type="submit" name="btn" class="btn btn-secondary" value="change">
+        Change
+    </button>
+</form>
+<br><br>
+
+<form method="post" action="{{url_for('account', username=username)}}">
+    <button type="submit" name="btn" class="btn btn-secondary" value="delete">
+        ⚠️ Delete Account
+    </button>
+</form>
+<br><br>
 
 {%endblock body_content%}
+

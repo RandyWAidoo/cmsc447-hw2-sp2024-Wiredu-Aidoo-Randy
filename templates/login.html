@@ -1,6 +1,7 @@
 {%extends "base.html"%}
 
 {%block body_content%}
+
 {%for category, message in get_flashed_messages(with_categories=True)%}
     <div class="alert alert-{{'success' if category == 'message' else category if category == 'warning' else 'danger'}} alert-dismissible fade show" role="alert">
         <strong>ⓘ {{message}}</strong>
@@ -9,20 +10,23 @@
 {%endfor%}
 
 <h1>Login</h1>
-<form method="post">
-    {{form.hidden_tag()}}
-
-    {{form.username.label(class="form-label")}}
-    {{form.username(class="form-control")}}
+<br>
+<form method="post" action="{{url_for('login')}}">
+    <label for="username" class="form-label">Username:</label>
+    <input type="text" id="username" name="username" class="form-control">
     <br>
 
-    {{form.pw.label(class="form-label")}}
-    {{form.pw(class="form-control")}}
+    <label for="password" class="form-label">Password:</label>
+    <input type="password" id="password" name="password" class="form-control">
     <br><br>
 
-    {{form.submit(class="btn btn-secondary")}}
+    <button type="submit" name="btn" class="btn btn-secondary">
+        Log In
+    </button>
 </form>
-<br>
+<br><br>
 
 <p>Don't have an account? <a href="{{url_for('signup')}}">Sign Up</a></p>
+
 {%endblock body_content%}
+

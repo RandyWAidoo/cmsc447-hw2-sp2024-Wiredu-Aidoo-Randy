@@ -3,11 +3,14 @@
 {%block body_content%}
     <div class="posts-container">
         {%with post={
-                "username": "User", "date": "January 1, 2024", 
-                "time": "1:00 pm", "title": "NotTwitter Rules",
+                "user": {"name": "User", "points": "+inf"}, 
+                "points": "+inf",
+                "date": "January 1, 2024", "time": "1:00 pm", 
+                "title": "NotTwitter Rules",
                 "content": "It's definitely the best platform out there.",
-                "space": "#all"
-            }, idx=0
+                "space": "all"
+            }, 
+            idx=0, update_db=false
         %}
             {%include "./components/user_post.html"%}
         {%endwith%}

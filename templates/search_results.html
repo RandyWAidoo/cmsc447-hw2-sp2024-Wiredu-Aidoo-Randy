@@ -26,14 +26,18 @@
     <!--Post results-->
     <div id="Post_results" class="posts-container">
         {%for post in posts%}
-            {%include "./components/user_post.html"%}
+            {%with idx=loop.index%}
+                {%include "./components/user_post.html"%}
+            {%endwith%}
         {%endfor%}
     </div>
 
     <!--Space results-->
     <div id="Space_results" class="posts-container inactive">
         {%for space, space_data in spaces.items()%}
-            {%include "./components/space.html"%}
+            {%with idx=loop.index%}
+                {%include "./components/space.html"%}
+            {%endwith%}
         {%endfor%}
     </div>
 

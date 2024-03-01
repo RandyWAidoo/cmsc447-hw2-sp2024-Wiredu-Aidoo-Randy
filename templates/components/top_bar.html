@@ -22,35 +22,27 @@
             
             <div class="dropdown-menu" aria-labelledby="dropdownMenuButton"> 
                 {%if username%}
-                    <a class="dropdown-item" href="{{url_for('account', username=username)}}">Account</a>
+                    <a class="dropdown-item" href="{{url_for('user_home', username=username)}}">
+                        User Home
+                    </a>
+                    <a class="dropdown-item" href="{{url_for('account', username=username)}}">
+                        Account
+                    </a>
                     <a class="dropdown-item" href="{{url_for('login')}}">Logout</a>
+                {%else%}
+                    <a class="dropdown-item" href="{{url_for('login')}}">Login/Signup</a>
                 {%endif%}
                 <a class="dropdown-item" href="{{url_for('explore')}}">Explore</a>
             </div> 
         </div> 
 
         <div class="nav-bar">
-            {%if username%}
-                {%for tup in nav_links|default([
-                    ("home", "Home"), 
-                    ("user_home", "User Home", {"username": username}), 
-                    ("about", "About")
-                ])%}
-                    {%set page, link_title = tup[0], tup[1]%}
-                    {%set args=dict()%}
-                    {%if tup|length == 3%}
-                        {%set args=tup[2]%}
-                    {%endif%}
-                    <a href="{{url_for(page, **args)}}">{{link_title}}</a>
-                {%endfor%}
-            {%else%}
-                {%for tup in nav_links|default([
-                    ("home", "Home"), ("about", "About"), ("login", "Login/Signup")
-                ])%}
-                    {%set page, link_title = tup%}
-                    <a href="{{url_for(page)}}">{{link_title}}</a>
-                {%endfor%}
-            {%endif%}
+            {%for tup in nav_links|default([
+                ("home", "Home"), ("about", "About")
+            ])%}
+                {%set page, link_title = tup%}
+                <a href="{{url_for(page)}}">{{link_title}}</a>
+            {%endfor%}
         </div>
 
         <div name="search_bar">

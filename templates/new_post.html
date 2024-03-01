@@ -1,28 +1,5 @@
 {%extends "base.html"%}
 
 {%block body_content%}
-
-<form method="post" action="{{url_for('new_post', username=username)}}">
-    <div class="post">
-        <div class="post-header">
-            <div>
-                👤 {{username}}
-                <p class="post-meta">Posted on ...</p>
-                <label for="title" class="form-label">Title:</label>
-                <input name="title" class="post-title">
-            </div>
-        </div>
-        <hr>
-        <label for="content" class="form-label">Content:</label>
-        <input name="content" class="post-content">
-        <hr>
-        <label for="space" class="form-label">Space:</label>
-        <div class="post-space-section">
-            <span>#</span><input type="text" id="space" name="space" class="form-control">
-        </div>
-    </div>
-    <br>
-    <button type="submit">Post</button>
-</form>
-
+{%with as_form=true%}{%include "./components/user_post.html"%}{%endwith%}
 {%endblock body_content%}

@@ -80,6 +80,13 @@ body {
     color: #fff;
 }
 
+/*Post delete btn*/
+.delete-post-button {
+    color: white; 
+    background-color: red;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+}
+
 /*Posts/Spaces*/
 .posts-container {
     margin-top: 50px; 

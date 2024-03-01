@@ -142,14 +142,3 @@ function handle_dislike(
         postUsername,
     )
 }
-
-function delete_post(postId){
-    fetch("/users/post_service/delete/" + postId + "/")
-    .then(response => {
-        document.getElementById(postId).remove();
-    })
-    .catch(error => {
-        var url = "/users/post_service/delete/" + postId + "/";
-        console.error("Error occurred while fetching " + url + ":", error);
-    });
-}

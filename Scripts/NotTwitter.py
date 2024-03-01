@@ -280,7 +280,6 @@ def explore():
 
     with conn:
         posts = records_to_dicts(cursor.execute("SELECT * FROM Posts").fetchall(), Posts_cols)
-    print(posts)
     posts = format_posts(random.sample(posts, min([100, len(posts)])))
     spaces = get_spaces(posts)
     return render_template('explore.html', posts=posts, 
@@ -329,6 +328,9 @@ def new_post(username):
 def post_disposition(username):
     conn, cursor, Users_cols, Posts_cols  = open_db()
 
+    if "username" not in session or session["username"] != username:
+        return redirect(url_for('login'))
+
     data = request.get_json()
     post_id = data["postId"]
     disposition = int(data["disposition"])
@@ -355,13 +357,18 @@ def post_disposition(username):
         ).fetchone()[0]
     return {"user_points": f"{user_pts} pts", "post_points": f"{post_pts} pts"}
 
-@app.route("/users/post_service/disposition", methods=["POST"])
-def post_delete(post_id):
-    conn, cursor, Users_cols, Posts_cols  = open_db()
+@app.route("/users/<username>/post_service/delete/<post_id>", methods=["POST"])
+def post_delete(username, post_id):
+    conn, cursor, Users_cols, Posts_cols = open_db()
+
+    if "username" not in session or session["username"] != username:
+        return redirect(url_for('login'))
 
     with conn:
-        cursor.execute("DELETE FROM Posts WHERE id = ?", (post_id))
+        cursor.execute("DELETE FROM Posts WHERE id = ?", (post_id,))
     conn.commit()
+
+    return redirect(request.referrer or url_for("user_home", username=username))
 
 @app.route('/users/<username>/account', methods=['GET', 'POST'])
 def account(username):

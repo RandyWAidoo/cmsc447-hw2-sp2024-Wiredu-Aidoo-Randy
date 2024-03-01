@@ -5,6 +5,18 @@
 <body>
     {%if not as_form|default(false)%}
         {%set str_idx=idx|default(0)|string%}
+        {%set delete_btn_id="postDeleteBtn" + str_idx%}
+        {%if post.user.name == username%}
+            <form method="post"
+            action="{{url_for('post_delete', username=username, post_id=post.id)}}"
+            >
+                <button type="submit" class="delete-post-button" 
+                id="{{delete_btn_id}}"
+                >
+                    x
+                </button>
+            </form>
+        {%endif%}
         <div class="post" id="{{post.id}}">
             <div class="post-header">
                 <div class="user-meta">

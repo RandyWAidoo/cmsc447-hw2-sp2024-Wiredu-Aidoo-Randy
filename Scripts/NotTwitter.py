@@ -14,8 +14,6 @@ proj_dir = os.path.split(os.path.split(__file__)[0])[0]
 static_dir = os.path.join(proj_dir, 'static')
 templates_dir = os.path.join(proj_dir, 'templates')
 db_path = os.path.join(proj_dir, 'db', 'user_data.sqlite3')
-conn = sqlite3.connect(db_path, check_same_thread=False)
-cursor = conn.cursor()
 
 app = Flask(__name__, static_folder=static_dir, template_folder=templates_dir)
 app.config['SECRET_KEY'] = ''.join(
@@ -23,16 +21,30 @@ app.config['SECRET_KEY'] = ''.join(
     for _ in range(32)
 )
 
-Users_cols = [
-    record[1] for record in
-    cursor.execute("PRAGMA table_info(Users)").fetchall()
-]
-Posts_cols = [
-    record[1] for record in
-    cursor.execute("PRAGMA table_info(Posts)").fetchall()
-]
+global_resources = dict()
+
 
 #Utility
+def get_db()->tuple[sqlite3.Connection, sqlite3.Cursor, list[str], list[str]]:
+    if "conn" not in global_resources:
+        global_resources["conn"] = sqlite3.connect(db_path, check_same_thread=False)
+    if "cursor" not in global_resources:
+        global_resources["cursor"] = cursor = global_resources["conn"].cursor()
+    if "Users_cols" not in global_resources:
+        global_resources["Users_cols"] = [
+            record[1] for record in
+            cursor.execute("PRAGMA table_info(Users)").fetchall()
+        ]
+    if "Posts_cols" not in global_resources:
+        global_resources["Posts_cols"] = [
+            record[1] for record in
+            cursor.execute("PRAGMA table_info(Posts)").fetchall()
+        ]
+    return (
+        global_resources["conn"], global_resources["cursor"], 
+        global_resources["Users_cols"], global_resources["Posts_cols"]
+    )
+
 def records_to_dicts(records: list[tuple], col_list: list[str])->list[dict]:
     return [
         {
@@ -43,6 +55,8 @@ def records_to_dicts(records: list[tuple], col_list: list[str])->list[dict]:
     ]
 
 def get_spaces(posts: list[dict])->dict[str, dict[str, str]]:
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     result = dict()
 
     for post in posts:
@@ -58,6 +72,8 @@ def get_spaces(posts: list[dict])->dict[str, dict[str, str]]:
 def format_posts(
     posts: list[dict]
 )->list[dict[str, tp.Union[str, dict[str, tp.Union[str, int]]]]]:
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     formatted = []
     for i in range(len(posts)):
         post = posts[i]
@@ -98,9 +114,10 @@ def about():
 # Authentication
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    session["username"] = None
+    conn, cursor, Users_cols, Posts_cols  = get_db()
 
     if request.method == "POST":
+        cursor = conn.cursor()
         username = request.form["username"]
         email = request.form["email"]
         pw = request.form["password"]
@@ -145,6 +162,8 @@ def signup():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     username = None
     pw = None
     login_success = False
@@ -171,6 +190,8 @@ def login():
 # Search results
 @app.route("/search", methods=['GET', 'POST'])
 def search():
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     if 'username' not in session:
         session['username'] = None
 
@@ -229,6 +250,8 @@ def search():
 # Exploration page
 @app.route('/explore')
 def explore():
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     if 'username' not in session:
         session['username'] = None
 
@@ -241,6 +264,8 @@ def explore():
 # User pages
 @app.route('/users/<username>')
 def user_home(username):
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     if "username" not in session or session["username"] != username:
         return redirect(url_for('login'))
     
@@ -251,6 +276,8 @@ def user_home(username):
 
 @app.route('/users/<username>/new_post', methods=["GET", "POST"])
 def new_post(username):
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     if "username" not in session or session["username"] != username:
         return redirect(url_for('login'))
     
@@ -273,6 +300,8 @@ def new_post(username):
     
 @app.route("/users/<username>/post_service/disposition", methods=["POST"])
 def post_disposition(username):
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     data = request.get_json()
     post_id = data["postId"]
     disposition = int(data["disposition"])
@@ -300,6 +329,8 @@ def post_disposition(username):
 
 @app.route('/users/<username>/account', methods=['GET', 'POST'])
 def account(username):
+    conn, cursor, Users_cols, Posts_cols  = get_db()
+
     if "username" not in session or session["username"] != username:
         return redirect(url_for('login'))
     

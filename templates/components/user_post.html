@@ -5,7 +5,7 @@
 <body>
     {%if not as_form|default(false)%}
         {%set str_idx=idx|default(0)|string%}
-        <div class="post">
+        <div class="post" id="{{post.id}}">
             <div class="post-header">
                 <div class="user-meta">
                     <span style="position: sticky; left: 0%">
@@ -34,12 +34,26 @@
                 {%set dislike_id="postDislikeBtn" + str_idx%}
                 {%set _update_db=update_db|default(true)%}
                 <button id="{{like_id}}" class="action-button like inactive" 
-                onclick="handle_like{{idx}}()"
+                onclick="handle_like(
+                    '{{like_id}}', '{{dislike_id}}', 
+                    'action-button like active', 'action-button dislike active', 
+                    'action-button like inactive', 'action-button dislike inactive', 
+                    '{{_update_db}}', 
+                    '{{post.id}}', 'user_points', '{{post_points_id}}', 
+                    '{{post.user.name}}'
+                )"
                 >
                     👍 Like
                 </button>
                 <button id="{{dislike_id}}" class="action-button dislike inactive"
-                onclick="handle_dislike{{idx}}()"
+                onclick="handle_dislike(
+                    '{{dislike_id}}', '{{like_id}}', 
+                    'action-button dislike active', 'action-button like active', 
+                    'action-button dislike inactive', 'action-button like inactive', 
+                    '{{_update_db}}', 
+                    '{{post.id}}', 'user_points', '{{post_points_id}}', 
+                    '{{post.user.name}}'
+                )"
                 >
                     👎 Dislike
                 </button>
@@ -49,56 +63,6 @@
             <hr>
             <div class="post-space-section">#{{post.space}}</div>
         </div>
-
-        <script>
-            function handle_like{{idx}}(){
-                if ('{{_update_db}}' == 'True' &&
-                    document.getElementById('{{dislike_id}}')
-                    .className === 'action-button dislike active')
-                {
-                    sendDisposition(
-                        '{{post.id}}', '{{user_points_id}}', 
-                        '{{post_points_id}}', '{{post.user.name}}', 1
-                    );
-                }
-                isActive = changeActiveState(
-                    '{{like_id}}', 'action-button like active', 
-                    '{{dislike_id}}', 'action-button dislike inactive', 
-                    maintain_active=false, fallbackClassName='action-button like inactive'
-                );
-                if ('{{_update_db}}' == 'True'){
-                    disposition = 1*isActive + -1*!isActive;
-                    sendDisposition(
-                        '{{post.id}}', '{{user_points_id}}', 
-                        '{{post_points_id}}', '{{post.user.name}}', disposition
-                    );
-                }
-            }
-    
-            function handle_dislike{{idx}}(){
-                if ('{{_update_db}}' == 'True' &&
-                    document.getElementById('{{like_id}}')
-                    .className === 'action-button like active')
-                {
-                    sendDisposition(
-                        '{{post.id}}', '{{user_points_id}}', 
-                        '{{post_points_id}}', '{{post.user.name}}', -1
-                    );
-                }
-                isActive = changeActiveState(
-                    '{{dislike_id}}', 'action-button dislike active', 
-                    '{{like_id}}', 'action-button like inactive', 
-                    maintain_active=false, fallbackClassName='action-button dislike inactive'
-                );
-                if ('{{_update_db}}' == 'True'){
-                    disposition = -1*isActive + 1*!isActive;
-                    sendDisposition(
-                        '{{post.id}}', '{{user_points_id}}', 
-                        '{{post_points_id}}', '{{post.user.name}}', disposition
-                    );
-                }
-            }
-        </script>
     {%else%}
         <form method="post" action="{{url_for('new_post', username=username)}}">
             <div class="post">

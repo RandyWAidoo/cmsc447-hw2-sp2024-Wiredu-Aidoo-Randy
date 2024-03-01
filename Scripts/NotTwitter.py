@@ -25,27 +25,42 @@ global_resources = dict()
 
 
 #Utility
-def get_db()->tuple[sqlite3.Connection, sqlite3.Cursor, list[str], list[str]]:
-    if "conn" not in global_resources:
+def close_db():
+    if "conn" in global_resources:
+        if global_resources["conn"]:
+            global_resources["conn"].close()
+        global_resources.pop("conn")
+    if "cursor" in global_resources:
+        global_resources.pop("cursor")
+    if "Users_cols" in global_resources:
+        global_resources.pop("Users_cols")
+    if "Posts_cols" in global_resources:
+        global_resources.pop("Posts_cols")
+
+
+def open_db(reinit=False)->tuple[sqlite3.Connection, sqlite3.Cursor, list[str], list[str]]:
+    if reinit:
+        close_db()
+    if "conn" not in global_resources or not global_resources["conn"]:
         global_resources["conn"] = sqlite3.connect(db_path, check_same_thread=False)
-    if "cursor" not in global_resources:
-        global_resources["cursor"] = cursor = global_resources["conn"].cursor()
-    if "Users_cols" not in global_resources:
+    if "cursor" not in global_resources or not global_resources["cursor"]:
+        global_resources["cursor"] = global_resources["conn"].cursor()
+    if "Users_cols" not in global_resources or not global_resources["Users_cols"]:
         global_resources["Users_cols"] = [
             record[1] for record in
-            cursor.execute("PRAGMA table_info(Users)").fetchall()
+            global_resources["cursor"].execute("PRAGMA table_info(Users)").fetchall()
         ]
-    if "Posts_cols" not in global_resources:
+    if "Posts_cols" not in global_resources or not global_resources["Posts_cols"]:
         global_resources["Posts_cols"] = [
             record[1] for record in
-            cursor.execute("PRAGMA table_info(Posts)").fetchall()
+            global_resources["cursor"].execute("PRAGMA table_info(Posts)").fetchall()
         ]
     return (
         global_resources["conn"], global_resources["cursor"], 
         global_resources["Users_cols"], global_resources["Posts_cols"]
     )
 
-def records_to_dicts(records: list[tuple], col_list: list[str])->list[dict]:
+def records_to_dicts(records: list[tuple], col_list: list)->list[dict]:
     return [
         {
             col_list[i]: record[i] 
@@ -55,7 +70,7 @@ def records_to_dicts(records: list[tuple], col_list: list[str])->list[dict]:
     ]
 
 def get_spaces(posts: list[dict])->dict[str, dict[str, str]]:
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     result = dict()
 
@@ -72,7 +87,7 @@ def get_spaces(posts: list[dict])->dict[str, dict[str, str]]:
 def format_posts(
     posts: list[dict]
 )->list[dict[str, tp.Union[str, dict[str, tp.Union[str, int]]]]]:
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     formatted = []
     for i in range(len(posts)):
@@ -81,15 +96,16 @@ def format_posts(
         date_and_time = post.pop("date_and_time")
         date, time = date_and_time.split()
         post["date"], post["time"] = date, time
-        post["user"] = dict(
-            name=username,
-            points=(
-                cursor.execute(
-                    "SELECT points FROM Users WHERE username = ?", 
-                    (username,)
-                ).fetchone()[0]
+        with conn:
+            post["user"] = dict(
+                name=username,
+                points=(
+                    cursor.execute(
+                        "SELECT points FROM Users WHERE username = ?", 
+                        (username,)
+                    ).fetchone()[0]
+                )
             )
-        )
         formatted.append(post)
     return formatted
 
@@ -114,10 +130,9 @@ def about():
 # Authentication
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     if request.method == "POST":
-        cursor = conn.cursor()
         username = request.form["username"]
         email = request.form["email"]
         pw = request.form["password"]
@@ -125,14 +140,15 @@ def signup():
 
         pw_confirmed = (pw == confirm_pw)
         username_valid = (','  not in username)
-        username_unique = (not cursor.execute(
-            "SELECT 1 FROM Users WHERE username = ?", 
-            (username,)
-        ).fetchall())
-        email_unique = (not cursor.execute(
-            "SELECT 1 FROM Users WHERE email = ?", 
-            (email,)
-        ).fetchall())
+        with conn:
+            username_unique = (not cursor.execute(
+                "SELECT 1 FROM Users WHERE username = ?", 
+                (username,)
+            ).fetchall())
+            email_unique = (not cursor.execute(
+                "SELECT 1 FROM Users WHERE email = ?", 
+                (email,)
+            ).fetchall())
 
         if not pw_confirmed:
             flash('Passwords do not match', 'error')
@@ -144,16 +160,17 @@ def signup():
             flash(f'Provided email already in use', 'error')
         else:
             pw_hash = bcrypt.hashpw(pw.encode(), salt=bcrypt.gensalt())
-            cursor.execute(
-                "INSERT INTO Users VALUES(?, ?, ?, ?, ?)",
-                (
-                    uuid.uuid4().hex,
-                    username,
-                    email,
-                    pw_hash.decode(),
-                    0
+            with conn:
+                cursor.execute(
+                    "INSERT INTO Users VALUES(?, ?, ?, ?, ?)",
+                    (
+                        uuid.uuid4().hex,
+                        username,
+                        email,
+                        pw_hash.decode(),
+                        0
+                    )
                 )
-            )
             conn.commit()
 
             return redirect(url_for('login'))
@@ -162,7 +179,7 @@ def signup():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     username = None
     pw = None
@@ -173,10 +190,11 @@ def login():
         username = request.form["username"]
         pw = request.form["password"]
         try:
-            pw_hash = cursor.execute(
-                "SELECT pw_hash FROM Users WHERE username = ?",
-                (username,)
-            ).fetchone()[0]
+            with conn:
+                pw_hash = cursor.execute(
+                    "SELECT pw_hash FROM Users WHERE username = ?",
+                    (username,)
+                ).fetchone()[0]
             login_success = (pw_hash and bcrypt.checkpw(pw.encode(), pw_hash.encode()))
             if login_success:
                 session["username"] = username
@@ -190,9 +208,7 @@ def login():
 # Search results
 @app.route("/search", methods=['GET', 'POST'])
 def search():
-    return redirect(url_for("explore"))
-
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     if 'username' not in session:
         session['username'] = None
@@ -244,10 +260,11 @@ def search():
         for _ in range(8):
             args.append(regex)
 
-    post_results = cursor.execute(sql_query, args).fetchall()
+    with conn:
+        post_results = cursor.execute(sql_query, args).fetchall()
 
     #Return a search page with post and space objects
-    posts = format_posts(post_results)
+    posts = format_posts(records_to_dicts(post_results, Posts_cols))
     spaces = get_spaces(posts)
     return render_template("search_results.html", posts=posts, 
                            spaces=spaces, username=session["username"])
@@ -256,12 +273,13 @@ def search():
 # Exploration page
 @app.route('/explore')
 def explore():
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     if 'username' not in session:
         session['username'] = None
 
-    posts = records_to_dicts(cursor.execute("SELECT * FROM Posts").fetchall(), Posts_cols)
+    with conn:
+        posts = records_to_dicts(cursor.execute("SELECT * FROM Posts").fetchall(), Posts_cols)
     print(posts)
     posts = format_posts(random.sample(posts, min([100, len(posts)])))
     spaces = get_spaces(posts)
@@ -271,19 +289,20 @@ def explore():
 # User pages
 @app.route('/users/<username>')
 def user_home(username):
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     if "username" not in session or session["username"] != username:
         return redirect(url_for('login'))
     
-    posts = records_to_dicts(cursor.execute("SELECT * FROM Posts").fetchall(), Posts_cols)
+    with conn:
+        posts = records_to_dicts(cursor.execute("SELECT * FROM Posts").fetchall(), Posts_cols)
     posts = format_posts(random.sample(posts, min([100, len(posts)])))
     spaces = get_spaces(posts)
     return render_template('user_home.html', username=username, posts=posts, spaces=spaces)
 
 @app.route('/users/<username>/new_post', methods=["GET", "POST"])
 def new_post(username):
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     if "username" not in session or session["username"] != username:
         return redirect(url_for('login'))
@@ -295,10 +314,11 @@ def new_post(username):
         content = request.form["content"]
         space = '_'.join(request.form["space"].split())
 
-        cursor.execute(
-            f"INSERT INTO Posts VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-            (id, username, date_and_time, "", title, content, space, 0)   
-        )
+        with conn:
+            cursor.execute(
+                f"INSERT INTO Posts VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+                (id, username, date_and_time, "", title, content, space, 0)   
+            )
         conn.commit()
 
         return redirect(url_for("user_home", username=username))
@@ -307,51 +327,50 @@ def new_post(username):
     
 @app.route("/users/<username>/post_service/disposition", methods=["POST"])
 def post_disposition(username):
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     data = request.get_json()
     post_id = data["postId"]
     disposition = int(data["disposition"])
     
-    cursor.execute(
-        "UPDATE Users SET points = points + ? WHERE username = ?",
-        (disposition, username)
-    )
-    cursor.execute(
-        "UPDATE Users SET points = points + ? WHERE id = ?",
-        (disposition, post_id)
-    )
+    with conn:
+        cursor.execute(
+            "UPDATE Users SET points = points + ? WHERE username = ?",
+            (disposition, username)
+        )
+        cursor.execute(
+            "UPDATE Posts SET points = points + ? WHERE id = ?",
+            (disposition, post_id)
+        )
     conn.commit()
 
+    with conn:
+        user_pts = cursor.execute(
+            "SELECT points FROM Users WHERE username = ?", 
+            (username,)
+        ).fetchone()[0]
+        post_pts = cursor.execute(
+            "SELECT points FROM Posts WHERE id = ?", 
+            (post_id,)
+        ).fetchone()[0]
+    return {"user_points": f"{user_pts} pts", "post_points": f"{post_pts} pts"}
 
-    user_pts = cursor.execute(
-        "SELECT points FROM Users WHERE username = ?", 
-        (username,)
-    ).fetchone()[0]
-    post_pts = cursor.execute(
-        "SELECT points FROM Posts WHERE id = ?", 
-        (post_id,)
-    ).fetchone()[0]
-    return {"user_points": user_pts, "post_points": post_pts}
+@app.route("/users/post_service/disposition", methods=["POST"])
+def post_delete(post_id):
+    conn, cursor, Users_cols, Posts_cols  = open_db()
+
+    with conn:
+        cursor.execute("DELETE FROM Posts WHERE id = ?", (post_id))
+    conn.commit()
 
 @app.route('/users/<username>/account', methods=['GET', 'POST'])
 def account(username):
-    conn, cursor, Users_cols, Posts_cols  = get_db()
+    conn, cursor, Users_cols, Posts_cols  = open_db()
 
     if "username" not in session or session["username"] != username:
         return redirect(url_for('login'))
     
-    if request.method == "GET":
-        return render_template(
-            'account.html', username=session["username"], email=user_record.email, 
-        )
-    elif request.form["btn"] == "delete":
-        cursor.execute("DELETE FROM Users WHERE username = ?", (username,))
-        cursor.execute("DELETE FROM Posts WHERE username = ?", (username,))
-        session["username"] = None
-        conn.commit()
-        return redirect(url_for('home'))
-    else:
+    with conn:
         user_record = records_to_dicts(
             cursor.execute(
                 "SELECT * FROM Users WHERE username = ?", 
@@ -359,23 +378,36 @@ def account(username):
             ).fetchall(),
             Users_cols
         )[0]
-
+    
+    if request.method == "GET":
+        return render_template(
+            'account.html', username=session["username"], email=user_record["email"], 
+        )
+    elif request.form["btn"] == "delete":
+        with conn:
+            cursor.execute("DELETE FROM Users WHERE username = ?", (username,))
+            cursor.execute("DELETE FROM Posts WHERE username = ?", (username,))
+        conn.commit()
+        session["username"] = None
+        return redirect(url_for('home'))
+    else:
         new_username = request.form["username"]
         new_email = request.form["email"]
         new_pw = request.form["password"]
         old_pw = request.form["old_password"]
 
-        old_pw_correct = bcrypt.checkpw(old_pw.encode(), user_record.pw_hash.encode())
-        username_unique = (username == new_username) \
-        or (not cursor.execute(
-            "SELECT 1 FROM Users WHERE username = ?", 
-            (username,)
-        ).fetchall())
-        email_unique = (user_record.email == new_email) \
-        or (not cursor.execute(
-            "SELECT 1 FROM Users WHERE email = ?", 
-            (new_email,)
-        ).fetchall())
+        old_pw_correct = bcrypt.checkpw(old_pw.encode(), user_record["pw_hash"].encode())
+        with conn:
+            username_unique = (username == new_username) \
+            or (not cursor.execute(
+                "SELECT 1 FROM Users WHERE username = ?", 
+                (new_username,)
+            ).fetchall())
+            email_unique = (user_record["email"] == new_email) \
+            or (not cursor.execute(
+                "SELECT 1 FROM Users WHERE email = ?", 
+                (new_email,)
+            ).fetchall())
 
         if not old_pw_correct:
             flash('Incorrect old password', 'error')
@@ -385,27 +417,30 @@ def account(username):
             flash(f'Provided email already in use', 'error')
 
         if old_pw_correct and username_unique and email_unique:
-            if new_username and new_username != user_record.username:
-                cursor.execute(
-                    "UPDATE Users SET username = ? WHERE username = ?",
-                    (new_username, username)
-                )
-                cursor.execute(
-                    "UPDATE Users SET username = ? WHERE username = ?",
-                    (new_username, username)
-                )
+            if new_username and new_username != user_record["username"]:
+                with conn:
+                    cursor.execute(
+                        "UPDATE Users SET username = ? WHERE username = ?",
+                        (new_username, username)
+                    )
+                    cursor.execute(
+                        "UPDATE Posts SET username = ? WHERE username = ?",
+                        (new_username, username)
+                    )
                 session["username"] = new_username
-            if new_email and new_email != user_record.email:
-                cursor.execute(
-                    "UPDATE Users SET email = ? WHERE username = ?",
-                    (new_email, username)
-                )
+            if new_email and new_email != user_record["email"]:
+                with conn:
+                    cursor.execute(
+                        "UPDATE Users SET email = ? WHERE username = ?",
+                        (new_email, username)
+                    )
             if new_pw and new_pw != old_pw:
                 new_pw_hash = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
-                cursor.execute(
-                    "UPDATE Users SET pw_hash = ? WHERE username = ?",
-                    (new_pw_hash.decode(), username)
-                )
+                with conn:
+                    cursor.execute(
+                        "UPDATE Users SET pw_hash = ? WHERE username = ?",
+                        (new_pw_hash.decode(), username)
+                    )
             conn.commit()
                 
             return redirect(url_for('account', username=session["username"]))

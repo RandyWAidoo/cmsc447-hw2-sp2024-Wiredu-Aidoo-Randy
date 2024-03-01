@@ -41,6 +41,14 @@
         {%endfor%}
     </div>
 
+    {%if username%}
+        <div class="floating-add-post-button">
+            <div class="add-post-circle">
+                <span><a href="{{url_for('new_post', username=username)}}">+</a></span>
+            </div>
+        </div>
+    {%endif%}
+
     {%block post_result_content%}
     {%endblock post_result_content%}
 {%endblock body_content%}

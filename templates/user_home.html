@@ -3,11 +3,3 @@
 {%block pre_result_content%}
     <h3>Welcome, {{username}}!</h3>
 {%endblock pre_result_content%}
-
-{%block post_result_content%}
-<div class="floating-button">
-    <div class="circle">
-        <span><a href="{{url_for('new_post', username=username)}}">+</a></span>
-    </div>
-</div>
-{%endblock post_result_content%}

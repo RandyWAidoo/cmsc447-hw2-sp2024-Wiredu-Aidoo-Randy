@@ -34,12 +34,12 @@
                 {%set dislike_id="postDislikeBtn" + str_idx%}
                 {%set _update_db=update_db|default(true)%}
                 <button id="{{like_id}}" class="action-button like inactive" 
-                onclick="handle_like()"
+                onclick="handle_like{{idx}}()"
                 >
                     👍 Like
                 </button>
                 <button id="{{dislike_id}}" class="action-button dislike inactive"
-                onclick="handle_dislike()"
+                onclick="handle_dislike{{idx}}()"
                 >
                     👎 Dislike
                 </button>
@@ -51,7 +51,7 @@
         </div>
 
         <script>
-            function handle_like(){
+            function handle_like{{idx}}(){
                 if ('{{_update_db}}' == 'True' &&
                     document.getElementById('{{dislike_id}}')
                     .className === 'action-button dislike active')
@@ -75,7 +75,7 @@
                 }
             }
     
-            function handle_dislike(){
+            function handle_dislike{{idx}}(){
                 if ('{{_update_db}}' == 'True' &&
                     document.getElementById('{{like_id}}')
                     .className === 'action-button like active')

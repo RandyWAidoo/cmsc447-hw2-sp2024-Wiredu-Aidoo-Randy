@@ -190,6 +190,8 @@ def login():
 # Search results
 @app.route("/search", methods=['GET', 'POST'])
 def search():
+    return redirect(url_for("explore"))
+
     conn, cursor, Users_cols, Posts_cols  = get_db()
 
     if 'username' not in session:
@@ -231,14 +233,18 @@ def search():
 
     #Recursively shrink the pool of results by 
     # filtering the previous results on the -nth keyword
-    post_results = cursor.execute(
-        f"SELECT * FROM Posts WHERE content GLOB ?\n" 
-        + f"AND content GLOB ?\n"*len(keywords) - 1,
-        tuple(
-            f"*[^a-zA-Z]{keywords[i]}[^a-zA-Z]*"
-            for i in range(len(keywords)-1, -1, -1)
-        )
-    ).fetchall()
+    cond = " OR ".join([f"{col} LIKE ?" for col in Posts_cols])
+    sql_query =(
+        f"SELECT * FROM Posts WHERE ({cond})\n" 
+        + f"AND ({cond})\n"*(len(keywords) - 1)
+    )
+    args = []
+    for i in range(len(keywords)-1, -1, -1):
+        regex = f"%{keywords[i]}%"
+        for _ in range(8):
+            args.append(regex)
+
+    post_results = cursor.execute(sql_query, args).fetchall()
 
     #Return a search page with post and space objects
     posts = format_posts(post_results)
@@ -256,6 +262,7 @@ def explore():
         session['username'] = None
 
     posts = records_to_dicts(cursor.execute("SELECT * FROM Posts").fetchall(), Posts_cols)
+    print(posts)
     posts = format_posts(random.sample(posts, min([100, len(posts)])))
     spaces = get_spaces(posts)
     return render_template('explore.html', posts=posts, 

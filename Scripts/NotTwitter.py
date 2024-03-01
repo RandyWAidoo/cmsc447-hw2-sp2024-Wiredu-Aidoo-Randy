@@ -13,7 +13,7 @@ import sqlite3
 proj_dir = os.path.split(os.path.split(__file__)[0])[0]
 static_dir = os.path.join(proj_dir, 'static')
 templates_dir = os.path.join(proj_dir, 'templates')
-db_path = os.path.join(proj_dir, 'db', 'user_data.sqlite3')
+db_path = os.path.join(proj_dir, 'database.db')
 
 app = Flask(__name__, static_folder=static_dir, template_folder=templates_dir)
 app.config['SECRET_KEY'] = ''.join(
@@ -434,21 +434,23 @@ def account(username):
                         "UPDATE Posts SET username = ? WHERE username = ?",
                         (new_username, username)
                     )
+                conn.commit()
                 session["username"] = new_username
             if new_email and new_email != user_record["email"]:
                 with conn:
                     cursor.execute(
                         "UPDATE Users SET email = ? WHERE username = ?",
-                        (new_email, username)
+                        (new_email, session["username"])
                     )
+                conn.commit()
             if new_pw and new_pw != old_pw:
                 new_pw_hash = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt())
                 with conn:
                     cursor.execute(
                         "UPDATE Users SET pw_hash = ? WHERE username = ?",
-                        (new_pw_hash.decode(), username)
+                        (new_pw_hash.decode(), session["username"])
                     )
-            conn.commit()
+                conn.commit()
                 
             return redirect(url_for('account', username=session["username"]))
         else:

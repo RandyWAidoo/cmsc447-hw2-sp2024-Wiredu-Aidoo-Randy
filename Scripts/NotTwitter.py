@@ -328,9 +328,6 @@ def new_post(username):
 def post_disposition(username):
     conn, cursor, Users_cols, Posts_cols  = open_db()
 
-    if "username" not in session or session["username"] != username:
-        return redirect(url_for('login'))
-
     data = request.get_json()
     post_id = data["postId"]
     disposition = int(data["disposition"])

@@ -3,16 +3,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
 </head>
 <body>
+    {%set str_idx=idx|default(0)|string%}
     {%if not as_form|default(false)%}
-        {%set str_idx=idx|default(0)|string%}
-        {%set delete_btn_id="postDeleteBtn" + str_idx%}
         {%if post.user.name == username%}
             <form method="post"
             action="{{url_for('post_delete', username=username, post_id=post.id)}}"
             >
-                <button type="submit" class="delete-post-button" 
-                id="{{delete_btn_id}}"
-                >
+                <button type="submit" class="delete-post-button">
                     x
                 </button>
             </form>
@@ -23,7 +20,7 @@
                     <span style="position: sticky; left: 0%">
                         <p>👤 {{post.user.name}}</p>
                     </span>
-                    {%set user_points_id="user_points" + str_idx%}
+                    {%set user_points_id="user_points_" + post.user.name + "_" + str_idx%}
                     <span style="position: sticky; left: 100%; font-size: 14px;">
                         <p id="{{user_points_id}}">{{post.user.points}} pts</p>
                     </span>
@@ -44,14 +41,18 @@
             <div class="post-actions">
                 {%set like_id="postLikeBtn" + str_idx%}
                 {%set dislike_id="postDislikeBtn" + str_idx%}
-                {%set _update_db=update_db|default(true)%}
+                {%if update_db|default(true) and username%}
+                    {%set _update_db=true%}
+                {%else%}
+                    {%set _update_db=false%}
+                {%endif%}
                 <button id="{{like_id}}" class="action-button like inactive" 
                 onclick="handle_like(
                     '{{like_id}}', '{{dislike_id}}', 
                     'action-button like active', 'action-button dislike active', 
                     'action-button like inactive', 'action-button dislike inactive', 
                     '{{_update_db}}', 
-                    '{{post.id}}', 'user_points', '{{post_points_id}}', 
+                    '{{post.id}}', 'user_points_{{post.user.name}}_', '{{post_points_id}}', 
                     '{{post.user.name}}'
                 )"
                 >
@@ -63,7 +64,7 @@
                     'action-button dislike active', 'action-button like active', 
                     'action-button dislike inactive', 'action-button like inactive', 
                     '{{_update_db}}', 
-                    '{{post.id}}', 'user_points', '{{post_points_id}}', 
+                    '{{post.id}}', 'user_points_{{post.user.name}}_', '{{post_points_id}}', 
                     '{{post.user.name}}'
                 )"
                 >
@@ -91,9 +92,9 @@
                 <input name="content" class="post-content">
                 <hr>
                 <label for="space" class="form-label">Space:</label>
-                <div class="post-space-section">
-                    <span>#</span><input type="text" id="space" name="space" class="form-control">
-                </div>
+                <label for="space" class="form-label">#</label>
+                <input type="text" id="space" name="space" 
+                class="post-space-section">
             </div>
             <br>
             <button type="submit">Post</button>
